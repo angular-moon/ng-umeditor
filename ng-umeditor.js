@@ -1,20 +1,45 @@
+
 var UM = require('umeditor');
 
+/*
+用法:
+<script type="text/html" umeditor ng-model='content' content-change='changeHandler(content)' placeholder='提示文案...'></script>
+可选的属性:
+config: umeditor配置项
+id: 默认使用 ng-model的变量名称作为ID, 如果需要指定id, 请使用 id={{id}}
+content-change: 内容改变时事件处理函数
+placeholder: placeholder文字
+drafts: 是否使用草稿自动恢复, 注意: 启用草稿自动恢复时  placeholder 和 ng-model 的初始值将被忽略
+        当收到的事件参数id匹配时,清除草稿和内容
+        用法: $scope.$broadcast('clear-umeditor', id);
+* */
 angular.module('gm.umeditor', [])
 .directive('umeditor', function(){
   return {
     restrict: 'AE',
     scope: {
-        config: '=',
-        contentChange: '&'
+      config: '=',
+      contentChange: '&',
+      id: '@',
+      drafts: '='
     },
     require: 'ngModel',
     transclude: true,
     link: function (scope, element, attr, ngModel) {
+
       //获取当前的DOM元素
       var _dom = element[0];
 
-      var _id = '_' + Math.floor(Math.random() * 100).toString() + new Date().getTime().toString();
+      //默认使用ngModel name作为编译器id, 如果需要自己指定id, 请使用id or data-id属性指定
+      var _id = scope.id || attr.ngModel;
+
+      //是否启用草稿恢复,默认false,
+      //drafts 和 placeholder冲突, 当启用drafts时会自动禁用placeholder
+      //drafts 启用时, ngModel的初始值也会被忽略
+      var drafts = !!scope.drafts;
+
+      if(drafts)
+          ngModel.$setViewValue(undefined);
 
       var _placeholder = '<p style="font-size:14px;color:#afafaf;">' +
           attr.placeholder +
@@ -46,6 +71,7 @@ angular.module('gm.umeditor', [])
           else
               ngModel.$setViewValue(undefined);
 
+
           //调用指令绑定的contentChange事件处理
           (scope.contentChange || angular.noop)();
       };
@@ -63,10 +89,23 @@ angular.module('gm.umeditor', [])
               _umeditor.setContent(ngModel.$viewValue);
               _umeditor.addListener('contentChange', editorToModel);
           } else {
-              _umeditor.setContent(_placeholder);
+              if(!drafts)
+                  _umeditor.setContent(_placeholder);
           }
-          //_umeditor.execCommand('fontsize', '32px');
-          //_umeditor.execCommand('fontfamily', '"Microsoft YaHei","微软雅黑"')
+
+          if(drafts){
+              //恢复草稿
+              _umeditor.execCommand('drafts');
+
+              //注册清除草稿和内容的事件, 当收到的事件参数id匹配时,清除草稿和内容
+              //用法: $scope.$broadcast('clear-umeditor', id);
+              scope.$on('clear-umeditor', function(event, id){
+                  if(id == _id){
+                      _umeditor.execCommand('cleardoc');
+                      _umeditor.execCommand('clearlocaldata');
+                  }
+              });
+          }
       });
 
       /**
@@ -77,7 +116,8 @@ angular.module('gm.umeditor', [])
        */
       _umeditor.addListener('focus', function () {
           if (!ngModel.$viewValue) {
-              _umeditor.setContent('');
+              if(!drafts)
+                  _umeditor.setContent('');
               _umeditor.addListener('contentChange', editorToModel);
           }
       });
@@ -92,17 +132,18 @@ angular.module('gm.umeditor', [])
       _umeditor.addListener('blur', function () {
           if (!_umeditor.hasContents()) {
               _umeditor.removeListener('contentChange', editorToModel);
-              _umeditor.setContent(_placeholder);
+              if(!drafts)
+                  _umeditor.setContent(_placeholder);
           }
       });
 
-      //注销编辑器
+      //清空内容和草稿,注销编辑器
       scope.$on('$destroy', function(){
           _umeditor.destroy();
       });
 
     }
   }
-})
+});
 
 return 'gm.umeditor';
