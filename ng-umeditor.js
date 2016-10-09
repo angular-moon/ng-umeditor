@@ -31,7 +31,8 @@ angular.module('gm.umeditor', [])
       var _dom = element[0];
 
       //默认使用ngModel name作为编译器id, 如果需要自己指定id, 请使用id or data-id属性指定
-      var _id = scope.id || attr.ngModel;
+      //规范化id中的"."为"_"
+      var _id = (scope.id || attr.ngModel)..replace(/\./g, "_");
 
       //是否启用草稿恢复,默认false,
       //drafts 和 placeholder冲突, 当启用drafts时会自动禁用placeholder
