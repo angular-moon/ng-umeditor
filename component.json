@@ -1,5 +1,5 @@
 {
-    "version": "1.1.0",
+    "version": "1.0.0",
     "description": "封装的umeditor指令",
     "name": "ng-umeditor",
     "main": "ng-umeditor.js",

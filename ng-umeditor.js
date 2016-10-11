@@ -1,4 +1,3 @@
-
 var UM = require('umeditor');
 
 /*
@@ -39,18 +38,19 @@ angular.module('gm.umeditor', [])
       //drafts 启用时, ngModel的初始值也会被忽略
       var drafts = !!scope.drafts;
 
-      if(drafts)
+      if(drafts){
           ngModel.$setViewValue(undefined);
+      }
 
       var _placeholder = '<p style="font-size:14px;color:#afafaf;">' +
-          attr.placeholder +
+          (attr.placeholder || '') +
           '</p>';
 
       var _config = scope.config || {
               toolbar: [
                   ' undo redo | bold italic underline strikethrough removeformat |',
                   'insertorderedlist insertunorderedlist |' ,
-                  'link unlink | emotion image video preview fullscreen'
+                  'link unlink | emotion image preview fullscreen'
               ],
               initialFrameWidth: '100%',
               initialFrameHeight: 300,
@@ -72,14 +72,13 @@ angular.module('gm.umeditor', [])
           else
               ngModel.$setViewValue(undefined);
 
-
           //调用指令绑定的contentChange事件处理
           (scope.contentChange || angular.noop)();
       };
 
       /**
        * umeditor准备就绪后，执行逻辑
-       * 如果ngModel存在
+       * 如果ngModel有值
        *   则给在编辑器中赋值
        *   给编辑器添加内容改变的监听事件.
        * 如果不存在
@@ -107,6 +106,15 @@ angular.module('gm.umeditor', [])
                   }
               });
           }
+
+          ngModel.$formatters.push(function(value){
+              ngModel.$setViewValue(value);
+              _umeditor.setContent(value);
+          })
+
+          ngModel.$render = function() {
+              console.log('x');
+          };
       });
 
       /**
@@ -116,13 +124,12 @@ angular.module('gm.umeditor', [])
        *   给编辑器添加内容改变的监听事件
        */
       _umeditor.addListener('focus', function () {
-          if (!ngModel.$viewValue) {
+          if (!ngModel.$modelValue) {
               if(!drafts)
                   _umeditor.setContent('');
               _umeditor.addListener('contentChange', editorToModel);
           }
       });
-
 
       /**
        * 添加编辑器取消选中事件
