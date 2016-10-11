@@ -107,14 +107,11 @@ angular.module('gm.umeditor', [])
               });
           }
 
+          //watch ngModel的变化
           ngModel.$formatters.push(function(value){
               ngModel.$setViewValue(value);
               _umeditor.setContent(value);
-          })
-
-          ngModel.$render = function() {
-              console.log('x');
-          };
+          });
       });
 
       /**
