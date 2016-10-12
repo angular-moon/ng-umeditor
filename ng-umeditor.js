@@ -33,6 +33,8 @@ angular.module('gm.umeditor', [])
       //规范化id中的"."为"_"
       var _id = (scope.id || attr.ngModel).replace(/\./g, "_");
 
+      _dom.setAttribute('id', _id);
+
       //是否启用草稿恢复,默认false,
       //drafts 和 placeholder冲突, 当启用drafts时会自动禁用placeholder
       //drafts 启用时, ngModel的初始值也会被忽略
@@ -59,9 +61,11 @@ angular.module('gm.umeditor', [])
               imageUrl: '/office/imageUp.jsp'
           }
 
-      _dom.setAttribute('id', _id);
 
       var _umeditor = UM.getEditor(_id, _config);
+
+      //标记监听事件是否绑定
+      var hasListener = false;
 
       /**
        * 对于umeditor添加内容改变事件，内容改变触发ngModel改变.
@@ -85,9 +89,10 @@ angular.module('gm.umeditor', [])
        *   则写入提示文案
        */
       _umeditor.ready(function () {
-          if (ngModel.$viewValue) {
-              _umeditor.setContent(ngModel.$viewValue);
+          if (ngModel.$modelValue) {
+              _umeditor.setContent(ngModel.$modelValue);
               _umeditor.addListener('contentChange', editorToModel);
+              hasListener = true;
           } else {
               if(!drafts)
                   _umeditor.setContent(_placeholder);
@@ -107,10 +112,12 @@ angular.module('gm.umeditor', [])
               });
           }
 
-          //watch ngModel的变化
           ngModel.$formatters.push(function(value){
               ngModel.$setViewValue(value);
-              _umeditor.setContent(value);
+              _umeditor.setContent(value || '');
+              if(value && !hasListener){
+                  _umeditor.addListener('contentChange', editorToModel);
+              }
           });
       });
 
@@ -125,6 +132,7 @@ angular.module('gm.umeditor', [])
               if(!drafts)
                   _umeditor.setContent('');
               _umeditor.addListener('contentChange', editorToModel);
+              hasListener = true;
           }
       });
 
@@ -135,8 +143,9 @@ angular.module('gm.umeditor', [])
        *   添加content为提示文案
        */
       _umeditor.addListener('blur', function () {
-          if (!_umeditor.hasContents()) {
+          if (!ngModel.$modelValue) {
               _umeditor.removeListener('contentChange', editorToModel);
+              hasListener = false;
               if(!drafts)
                   _umeditor.setContent(_placeholder);
           }
